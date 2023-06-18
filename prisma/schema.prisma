@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  password      String
+  emailVerified DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  role          String         @default("USER")
+  sessions      Session[]
+  rsvp          RSVP[]
+  bookings      Booking[]
+  contacts      Contact[]
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+  accounts      Account[]
+}
+
+model Account {
+  id                 String    @id @default(cuid())
+  userId             String
+  providerType       String
+  providerId         String
+  providerAccountId  String
+  refreshToken       String?
+  accessToken        String?
+  accessTokenExpires DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  firstName          String
+  lastName           String
+  user               User      @relation(fields: [userId], references: [id])
+  bio                String?
+
+  @@unique([providerId, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  accessToken  String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model VerificationRequest {
+  id         String   @id @default(cuid())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Event {
+  id               Int                @id @default(autoincrement())
+  name             String
+  description      String
+  location         String
+  startDate        DateTime
+  bookings         Booking[]
+  endDate          DateTime
+  guests           Guest[]
+  featuredImage    String
+  isPaid           Boolean            @default(false)
+  eventCategoryId  Int
+  eventCategory    EventCategory      @relation(fields: [eventCategoryId], references: [id])
+  tickets          Ticket[]
+  rsvps            RSVP[]
+  registrationForm RegistrationForm[]
+  schedules        Schedule[]
+  speakers         Speaker[]
+  sponsors         Sponsor[]
+  feedbacks        Feedback[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model Booking {
+  id          Int           @id @default(autoincrement())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  eventId     Int
+  event       Event         @relation(fields: [eventId], references: [id])
+  ticketId    Int
+  ticket      Ticket        @relation(fields: [ticketId], references: [id])
+  promoCodeId Int
+  promoCode   PromoCode     @relation(fields: [promoCodeId], references: [id])
+  amount      Float
+  status      PaymentStatus
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Schedule {
+  id        Int           @id @default(autoincrement())
+  name      String
+  startTime DateTime
+  endTime   DateTime
+  eventId   Int
+  amount    Float
+  status    PaymentStatus
+  event     Event         @relation(fields: [eventId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model EventCategory {
+  id        Int      @id @default(autoincrement())
+  name      String
+  events    Event[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ticket {
+  id        Int       @id @default(autoincrement())
+  name      String
+  price     Float
+  quantity  Int
+  eventId   Int
+  bookings  Booking[]
+  event     Event     @relation(fields: [eventId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Guest {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String
+  eventId   Int
+  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Contact {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  tags      Tag[]
+  phone     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tag {
+  id       Int       @id @default(autoincrement())
+  name     String
+  contacts Contact[]
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model PromoCode {
+  id        Int       @id @default(autoincrement())
+  code      String    @unique
+  discount  Float
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model RSVP {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  eventId   Int
+  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RegistrationForm {
+  id      Int   @id @default(autoincrement())
+  eventId Int
+  event   Event @relation(fields: [eventId], references: [id])
+  config  Json
+}
+
+model Speaker {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String
+  bio       String
+  logo      String
+  picture   String
+  eventId   Int
+  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Sponsor {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String
+  logo      String
+  picture   String
+  eventId   Int
+  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String
+  comment   String
+  rating    Int
+  eventId   Int
+  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  message   String
+  action    String
+  details   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
